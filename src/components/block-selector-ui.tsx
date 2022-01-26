@@ -137,7 +137,7 @@ export class BlockSelectorUI extends React.Component<IBlockSelectorProps, {}> {
 
     const prompt = () => {
 
-      const input = window.prompt('pleased enter a block number you want to browse historic, or latest to track the latest block.');
+      const input = window.prompt('please enter a block number you want to browse historic, or latest to track the latest block.');
       if (input) {
         if (input === 'latest') {
           this.props.modelDataAdapter.showLatest();
