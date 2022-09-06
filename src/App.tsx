@@ -116,6 +116,7 @@ class App extends React.Component<AppProps> {
       { title: "K2", field: "isWrittenAcks", headerTooltip: "Key 2 (Acks) was contributed - Node has written all keys", headerFilter:true, formatter: "tickCross", width: 30 },
       // { title: "KeyGenMode", field: "keyGenMode", headerFilter: true },
       /* miner fields */
+      { title: "Node Name", field: "nodeName", headerFilter:true, hozAlign: "left",  width: 370 },
       { title: "Miner address", field: "miningAddress", headerFilter:true, hozAlign: "left",  width: 370 },
 
     ];

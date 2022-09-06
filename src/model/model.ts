@@ -42,6 +42,8 @@ export class Pool {
   public addedInEpoch: number = 0;
   public isCurrentValidator: boolean = false;
 
+  public nodeName: string = 'hbbft';
+
   public candidateStake: BN = new BN(0);
   public totalStake: BN = new BN(0);
   public myStake: BN = new BN(0);
