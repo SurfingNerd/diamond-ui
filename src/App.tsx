@@ -28,6 +28,7 @@ import AddPool from './components/AddPool';
 import RNG from './components/RNG';
 import BlockchainService from './utils/BlockchainService';
 import { ChevronDown, ArrowClockwise } from "react-bootstrap-icons";
+import GrafanaIframe from './components/GrafanaIframe';
 
 interface AppProps {
   adapter: ModelDataAdapter,

@@ -55,7 +55,7 @@ export default class BlockchainService {
       return true;
     }
 
-    const toastId = toast.loading("Transaction Pending");
+    const toastId = toast.loading("Transaction in progress");
     const moreToClaim = await this.adapter.claimReward(this.pool.stakingAddress);
     this.getRewardClaimableAmount();
 
@@ -113,7 +113,7 @@ export default class BlockchainService {
       this.notify("Cannot stake on a pool which is currently banned");
       return true;
     } else {
-      const id = toast.loading("Transaction Pending");
+      const id = toast.loading("Transaction in progress");
       try {
         const resp = await this.adapter.stake(this.pool.stakingAddress, stakeAmount);
         if (resp) {
@@ -147,7 +147,7 @@ export default class BlockchainService {
       return true;
     }
 
-    const id = toast.loading("Transaction Pending");
+    const id = toast.loading("Transaction in progress");
     // const isActiveValidator = await this.adapter.vsContract.methods.isValidator(minningAddress).call();
 
     // if (isActiveValidator) {
@@ -199,7 +199,7 @@ export default class BlockchainService {
     if (!this.context.canStakeOrWithdrawNow) {
       this.notify('outside staking/withdraw time window');
     } else {
-      const toastId = toast.loading("Transaction Pending");
+      const toastId = toast.loading("Transaction in progress");
       await this.adapter.claimStake(this.pool.stakingAddress);
       setTimeout(() => {
         toast.dismiss(toastId)

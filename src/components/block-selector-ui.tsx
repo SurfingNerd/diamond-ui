@@ -132,19 +132,20 @@ export class BlockSelectorUI extends React.Component<BlockSelectorUIProps, Block
   }
 
   private async getValidatorsCount() {
-    const inactivePools = await this.props.modelDataAdapter.stContract.methods.getPoolsInactive().call();
-    const activeValidators = this.props.modelDataAdapter.context.pools.filter((x: any) => x.isCurrentValidator);
-    const validValidators = activeValidators.filter((x: any) => !inactivePools.includes(x.stakingAddress)).length;
-    this.setState({ activeValidators: activeValidators.length, validValidators });
+    setInterval(() => {
+      const activeValidators = this.props.modelDataAdapter.context.pools.filter((x: any) => x.isCurrentValidator);
+      const validValidators = this.props.modelDataAdapter.context.pools.filter((x: any) => x.isAvailable);
+      this.setState({ activeValidators: activeValidators.length, validValidators: validValidators.length });
+    }, 5000)
   }
 
   componentDidMount() {
     this.getValidatorsCount();
   }
 
-  componentDidUpdate() {
-    this.getValidatorsCount();
-  }
+  // componentDidUpdate() {
+  //   this.getValidatorsCount();
+  // }
 
   public render(): JSX.Element {
     const { modelDataAdapter } = this.props;

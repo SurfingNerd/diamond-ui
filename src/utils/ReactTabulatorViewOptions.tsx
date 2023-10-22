@@ -205,6 +205,7 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
     }
 
     const currColState = this.state.columnsState.map(col => col.title);
+    // console.log(currColState)
     // const updatedColState = this.state.selectedColumns.map(col => {
     //   if (col.status) {
     //     return col;
@@ -225,11 +226,16 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
       }
     })
 
-    console.log({colsToAdd})
-    console.log({colsToRemove})
+    // console.log({colsToAdd})
+    // console.log({colsToRemove})
 
-    this.addColumn(colsToAdd);
-    this.removeColumn(colsToRemove);
+    if (colsToAdd.length > 0) {
+      this.addColumn(colsToAdd);
+    }
+    
+    if (colsToRemove.length > 0) {
+      this.removeColumn(colsToRemove);
+    }
   }
 
   addTabRowEventListeners = () => {
@@ -383,9 +389,9 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
 
   removeColumn = (titlesArr: string[]): void => {
     // console.log(this.state.columnsState)
-    console.log(this.state.columnsState)
+    // console.log(this.state.columnsState)
     const filteredColumns = this.state.columnsState.filter(item => !titlesArr.includes(item.title));
-    console.log({filteredColumns})
+    // console.log({filteredColumns})
     // const updatedDataState = this.state.dataState.map(obj => {
     //   const { [title]: omittedKey, ...rest } = obj;
     //   return rest;
@@ -404,6 +410,7 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
   }
 
   initializeTabulator = (data: any, columns: any) => {
+    // console.log(columns)
     if (this.el.current) {
       this.tabulator = new Tabulator(this.el.current, {
         data: data,
@@ -419,6 +426,16 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
         }
       });
   
+      setTimeout(() => {
+        const tabPages = document.querySelectorAll('.tabulator-page');
+    
+        tabPages.forEach((page: any) => {
+          page.addEventListener('click', this.addTabRowEventListeners);
+  
+          page.addEventListener("dblclick", this.addTabRowEventListeners);
+        });
+      }, 500);
+
       this.addTabRowEventListeners();
     }
   }
@@ -430,7 +447,7 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
 
   rowClicked = (e: any) => {
     const rowStakingAddress = e.target.closest('.tabulator-row').querySelector('[tabulator-field="stakingAddress"]').textContent.trim();
-
+    // console.log(rowStakingAddress, "here")
     if (e.target instanceof HTMLButtonElement && e.target.textContent === "Claim") {
       const poolData = this.state.dataState.filter(data => data.stakingAddress === rowStakingAddress);
       this.props.blockChainService.claimReward(e, poolData[0]);
@@ -508,9 +525,9 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
                 {this.state.selectedColumns.map((item, key) => (
                   [
                     'Miner address',
-                    'My Stake',
-                    'Rewards',
-                    'Ordered Withdraw'
+                    // 'My Stake',
+                    // 'Rewards',
+                    // 'Ordered Withdraw'
                   ].includes(item.title) ? 
                   <React.Fragment key={key}>
                     <span className={item.status ? 'selectedOption' : ''} onClick={this.handleOptionSelect}>{item.title}</span>
