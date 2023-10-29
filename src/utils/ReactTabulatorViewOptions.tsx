@@ -42,6 +42,11 @@ const presets = [
   'All Pools',
   // 'Price Change'
 ]
+
+const presetCols = {
+  'Default': ['A', 'C', 'My Stake', 'Rewards', 'Ordered Withdraw']
+}
+
 /**
  * view options witch sets of colums to be displayed.
  *  
@@ -189,10 +194,37 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
       // this.addTabRowEventListeners();
     }
 
-    const allColumns = this.defaultColumns.map((col: any) => {return {"title": col.title, status: true}});
+    let allColumns = this.defaultColumns.map((col: any) => {return {"title": col.title, status: true}});
+    if (this.props.tabulatorColumsPreset == 'Default') {
+      allColumns = allColumns.filter(item => presetCols['Default'].includes(item.title));
+    }
+    
     this.setState({
       selectedColumns: [...allColumns],
     });
+
+    // let colsToAdd: any = [];
+    // let colsToRemove: any = [];
+    // const currColState = this.state.columnsState.map(col => col.title);
+    // const allColumnsTitles = allColumns.map(item => item.title);
+
+    // currColState.forEach(col => {
+    //   if (!allColumnsTitles.includes(col)) {
+    //     colsToRemove.push(col);
+    //   }
+    // })
+    // console.log(currColState)
+
+    // console.log({colsToAdd})
+    // console.log({colsToRemove})
+
+    // if (colsToAdd.length > 0) {
+    //   this.addColumn(colsToAdd);
+    // }
+    
+    // if (colsToRemove.length > 0) {
+    //   this.removeColumn(colsToRemove);
+    // }
   }
   
   updateColumnsPreference = () => {
@@ -426,14 +458,14 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
         }
       });
   
-      setTimeout(() => {
-        const tabPages = document.querySelectorAll('.tabulator-page');
-    
-        tabPages.forEach((page: any) => {
-          page.addEventListener('click', this.addTabRowEventListeners);
-  
-          page.addEventListener("dblclick", this.addTabRowEventListeners);
-        });
+      setInterval(() => {
+        try {
+          const tabPages = document.querySelectorAll('.tabulator-page');    
+          tabPages.forEach((page: any) => {
+            page.addEventListener('click', this.addTabRowEventListeners);
+            page.addEventListener("dblclick", this.addTabRowEventListeners);
+          });
+        } catch(err) {}
       }, 500);
 
       this.addTabRowEventListeners();
@@ -524,10 +556,10 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
                 <legend>My Finance</legend>
                 {this.state.selectedColumns.map((item, key) => (
                   [
-                    'Miner address',
-                    // 'My Stake',
-                    // 'Rewards',
-                    // 'Ordered Withdraw'
+                    // 'Miner address',
+                    'My Stake',
+                    'Rewards',
+                    'Ordered Withdraw'
                   ].includes(item.title) ? 
                   <React.Fragment key={key}>
                     <span className={item.status ? 'selectedOption' : ''} onClick={this.handleOptionSelect}>{item.title}</span>
