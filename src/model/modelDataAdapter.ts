@@ -212,10 +212,9 @@ export class ModelDataAdapter {
     this.context.myAddr = web3Provider.currentProvider.selectedAddress;
 
     this.hasWeb3BrowserSupport = true;
+    this.postProvider = web3Provider;
     
     await this.reinitializeContracts(web3Provider);
-
-    this.postProvider = web3Provider;
     
     await this.handleNewBlock();
 
@@ -403,10 +402,13 @@ export class ModelDataAdapter {
 
   private async getClaimableReward(stakingAddr: string): Promise<string> {
     if (!this.postProvider) {
+      console.error(`${stakingAddr} no post provider`);
       return '0';
     }
     // getRewardAmount() fails if invoked for a staker without stake in the pool, thus we check that beforehand
-    const hasStake: boolean = stakingAddr === this.context.myAddr ? true : (await this.stContract.methods.stakeFirstEpoch(stakingAddr, this.context.myAddr).call(this.tx(), this.block())) !== '0';
+    // we should query the cached amount here.
+    const hasStake: boolean = stakingAddr.toLowerCase() === this.context.myAddr ? true : (await this.stContract.methods.stakeFirstEpoch(stakingAddr, this.context.myAddr).call(this.tx(), this.block())) !== '0';
+    console.error(`hasStake: ${stakingAddr} - ${hasStake}  - myAddr: ${this.context.myAddr}`);
     return hasStake ? this.stContract.methods.getRewardAmount([], stakingAddr, this.context.myAddr).call(this.tx(), this.block()) : '0';
   }
 
