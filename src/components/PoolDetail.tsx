@@ -198,7 +198,7 @@ class PoolDetail extends React.Component<PoolProps> {
 
                 <div>
                   <span>Claimable Reward</span>
-                  <span>{this.props.pool.claimableReward} DMD</span>
+                  <span>{`${BigNumber(this.props.pool.claimableReward).dividedBy(Math.pow(10, 18)).toFixed(2)}`} DMD</span>
                 </div>
               </div>
             </Accordion.Body>
@@ -238,7 +238,7 @@ class PoolDetail extends React.Component<PoolProps> {
                 <label htmlFor="stakeamount">Stake</label>
                 <form
                   onSubmit={async (e) => {
-                    await this.blockchainService.handleDelegateStake(e);
+                    await this.blockchainService.handleDelegateStake(e, this.props.pool);
                     await this.refreshData();
                     this.forceUpdate();                    
                   }}

@@ -212,10 +212,9 @@ export class ModelDataAdapter {
     this.context.myAddr = web3Provider.currentProvider.selectedAddress;
 
     this.hasWeb3BrowserSupport = true;
+    this.postProvider = web3Provider;
     
     await this.reinitializeContracts(web3Provider);
-
-    this.postProvider = web3Provider;
     
     await this.handleNewBlock();
 
@@ -406,7 +405,7 @@ export class ModelDataAdapter {
       return '0';
     }
     // getRewardAmount() fails if invoked for a staker without stake in the pool, thus we check that beforehand
-    const hasStake: boolean = stakingAddr === this.context.myAddr ? true : (await this.stContract.methods.stakeFirstEpoch(stakingAddr, this.context.myAddr).call(this.tx(), this.block())) !== '0';
+    const hasStake: boolean = stakingAddr.toLowerCase() === this.context.myAddr ? true : (await this.stContract.methods.stakeFirstEpoch(stakingAddr, this.context.myAddr).call(this.tx(), this.block())) !== '0';
     return hasStake ? this.stContract.methods.getRewardAmount([], stakingAddr, this.context.myAddr).call(this.tx(), this.block()) : '0';
   }
 
@@ -769,7 +768,7 @@ export class ModelDataAdapter {
   public async claimReward(poolAddr: string): Promise<boolean | string> {
     console.log(`[INFO] ${this.context.myAddr} wants to claim the available reward from pool ${poolAddr}`);
     const txOpts = { ...this.defaultTxOpts };
-    txOpts.gasLimit = '800000000';
+    txOpts.gasLimit = '300000000';
     txOpts.from = this.context.myAddr;
 
     const epochList = await this.brContract.methods.epochsToClaimRewardFrom(poolAddr, this.context.myAddr).call();

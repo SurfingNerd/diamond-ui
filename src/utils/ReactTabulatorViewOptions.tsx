@@ -23,7 +23,6 @@ interface ReactTabulatorViewOptionsProps {
   allListNameProp: string;
   children: any;
   dataProp: any;
-  columnsProp: any;
   setAppDataState: any;
   blockChainService: BlockchainService,
   tabulatorColumsPreset: string,
@@ -479,7 +478,7 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
 
   rowClicked = (e: any) => {
     const rowStakingAddress = e.target.closest('.tabulator-row').querySelector('[tabulator-field="stakingAddress"]').textContent.trim();
-    // console.log(rowStakingAddress, "here")
+    console.log(rowStakingAddress, "here")
     if (e.target instanceof HTMLButtonElement && e.target.textContent === "Claim") {
       const poolData = this.state.dataState.filter(data => data.stakingAddress === rowStakingAddress);
       this.props.blockChainService.claimReward(e, poolData[0]);
