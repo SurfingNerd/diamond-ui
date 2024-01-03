@@ -179,16 +179,17 @@ class App extends React.Component<AppProps, AppState> {
   public componentDidMount(): void {
     console.log('App component did mount.');
 
-    this.props.adapter.registerUIElement(this);
-
     const { adapter } = this.props;
     const { context } = adapter;
+
+    adapter.registerUIElement(this);
+
     const data = [...context.pools];
-    console.log(data)
     this.setState({poolsData: data});
 
+    // mobx
     reaction(
-      () => context.pools.slice(), // Observe a copy of the pools array
+      () => context.pools.slice(),
       (pools: Pool[]) => {
         this.setState({ poolsData: pools });
       }
@@ -196,15 +197,13 @@ class App extends React.Component<AppProps, AppState> {
   }
 
   public componentWillUnmount() {
-    console.log('component will unmount.');
+    console.log('App component will unmount.');
     this.props.adapter.unregisterUIElement(this);
   }
 
   public render(): JSX.Element {
-
     const { adapter } = this.props;
     const { context } = adapter;
-    
 
     context.currentValidatorsWithoutPools.map((address: any, key: number) => (
       <div key={key} className="text-danger" title="Validators can loose their pool association when the first validators after chain launch fail to take over control. (missed out key generation ?)">Validator without a Pool Association: {address}</div>

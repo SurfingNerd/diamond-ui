@@ -31,10 +31,10 @@
     },
     {
       "inputs": [],
-      "name": "governancePotAddress",
+      "name": "getGovernanceAddress",
       "outputs": [
         {
-          "internalType": "address payable",
+          "internalType": "address",
           "name": "",
           "type": "address"
         }
@@ -43,14 +43,8 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "initialize",
+      "inputs": [],
+      "name": "notifyEarlyEpochEnd",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

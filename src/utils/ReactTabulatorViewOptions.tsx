@@ -11,8 +11,6 @@ import ReactDOMServer from "react-dom/server";
 import BigNumber from "bignumber.js";
 import { toast } from "react-toastify";
 
-// import { ColumnDefinition } from 'react-tabulator/lib/ReactTabulator';
-
 interface ReactTabulatorViewOptionsColumnSet {
   listName: string,
   columnIds: ArrayLike<String>
@@ -45,23 +43,6 @@ const presets = [
 const presetCols = {
   'Default': ['A', 'C', 'My Stake', 'Rewards', 'Ordered Withdraw']
 }
-
-/**
- * view options witch sets of colums to be displayed.
- *  
- */
-
-//  const progressWithLabelFormatter = (cell: any) => {
-//   const value = cell.getValue();
-//   const min = cell.getColumn().getDefinition().formatterParams.min;
-//   const max = cell.getColumn().getDefinition().formatterParams.max;
-
-//   const progress = Math.round(((value - min) / (max - min)) * 100);
-//   const progressBar = `<div class="progress-bar" style="width: %"></div>`;
-//   const label = `<div class="progress-label">${value}</div>`;
-
-//   return `<div class="progress-wrapper">${progressBar}${label}</div>`;
-// };
 
 const copyFormatter = (cell: any) => {
     const cellValue = cell.getValue();
@@ -441,7 +422,6 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
   }
 
   initializeTabulator = (data: any, columns: any) => {
-    // console.log(columns)
     if (this.el.current) {
       this.tabulator = new Tabulator(this.el.current, {
         data: data,
@@ -493,11 +473,17 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
   handleOptionSelect = (e: any) => {
     e.preventDefault();
 
-    const updatedCols = this.state.selectedColumns.map(item => {
-      if (item.title === e.target.innerHTML) {
-        item.status = !item.status;
+    const updatedCols = this.defaultColumns.map(item => {
+      // console.log(item.title.toLowerCase(), e.target.innerHTML.toLowerCase())
+      let col;
+      if (item.title.toLowerCase() === e.target.innerHTML.toLowerCase()) {
+        col = this.state.selectedColumns.filter(col => col.title.toLowerCase() == item.title.toLowerCase());
+        if (!col.length) {
+          col[0] = {title: item.title, status: false}
+        }
+        col[0].status = !col[0].status;
       }
-      return item;
+      return col;
     })
 
     this.setState({
@@ -533,39 +519,72 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
 
               <div className="selectableOptionContainer">
                 <legend>Key Generation</legend>
-                {this.state.selectedColumns.map((item, key) => (
-                  ['k1', 'p', 'k2'].includes(item.title.toLowerCase()) ? 
-                  <React.Fragment key={key}>
-                    <span className={item.status ? 'selectedOption' : ''} onClick={this.handleOptionSelect}>{item.title}</span>
-                  </React.Fragment>
-                   : 
-                  ""
-                ))}
+                {['k1', 'p', 'k2'].map((item: any, key: number) => {
+                  const selectedItem = this.state.selectedColumns.find((selectedItem) =>
+                    selectedItem.title.toLowerCase() === item.toLowerCase()
+                  );
+
+                  if (selectedItem) {
+                    return (
+                      <React.Fragment key={key}>
+                        <span className={selectedItem.status ? 'selectedOption' : ''} onClick={this.handleOptionSelect}>{selectedItem.title}</span>
+                      </React.Fragment>
+                    );
+                  } else {
+                    return (
+                      <React.Fragment key={key}>
+                        <span onClick={this.handleOptionSelect}>{item.toUpperCase()}</span>
+                      </React.Fragment>
+                    );
+                  }
+                })}
 
                 <legend>Node status</legend>
-                {this.state.selectedColumns.map((item, key) => (
-                  ['s', 'a', 'c', 'e'].includes(item.title.toLowerCase()) ? 
-                  <React.Fragment key={key}>
-                    <span className={item.status ? 'selectedOption' : ''} onClick={this.handleOptionSelect}>{item.title}</span>
-                  </React.Fragment>
-                   : 
-                  ""
-                ))}
+                  {['s', 'a', 'c', 'e'].map((item: any, key: number) => {
+                  const selectedItem = this.state.selectedColumns.find((selectedItem) =>
+                    selectedItem.title.toLowerCase() === item.toLowerCase()
+                  );
+
+                  if (selectedItem) {
+                    return (
+                      <React.Fragment key={key}>
+                        <span className={selectedItem.status ? 'selectedOption' : ''} onClick={this.handleOptionSelect}>{selectedItem.title}</span>
+                      </React.Fragment>
+                    );
+                  } else {
+                    return (
+                      <React.Fragment key={key}>
+                        <span onClick={this.handleOptionSelect}>{item.toUpperCase()}</span>
+                      </React.Fragment>
+                    );
+                  }
+                })}
 
                 <legend>My Finance</legend>
-                {this.state.selectedColumns.map((item, key) => (
-                  [
-                    // 'Miner address',
+                  {[
+                    'Miner address',
                     'My Stake',
                     'Rewards',
                     'Ordered Withdraw'
-                  ].includes(item.title) ? 
-                  <React.Fragment key={key}>
-                    <span className={item.status ? 'selectedOption' : ''} onClick={this.handleOptionSelect}>{item.title}</span>
-                  </React.Fragment>
-                   : 
-                  ""
-                ))}
+                  ].map((item: any, key: number) => {
+                    const selectedItem = this.state.selectedColumns.find((selectedItem) =>
+                      selectedItem.title.toLowerCase() === item.toLowerCase()
+                    );
+  
+                    if (selectedItem) {
+                      return (
+                        <React.Fragment key={selectedItem.key}>
+                          <span key={key} className={selectedItem.status ? 'selectedOption' : ''} onClick={this.handleOptionSelect}>{selectedItem.title}</span>
+                        </React.Fragment>
+                      );
+                    } else {
+                      return (
+                        <React.Fragment key={item}>
+                          <span key={key} onClick={this.handleOptionSelect}>{item}</span>
+                        </React.Fragment>
+                      );
+                    }
+                  })}
               </div>
 
             </Modal.Body>

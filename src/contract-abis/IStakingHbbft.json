@@ -89,71 +89,6 @@
     {
       "inputs": [
         {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "_validatorSetContract",
-              "type": "address"
-            },
-            {
-              "internalType": "address[]",
-              "name": "_initialStakingAddresses",
-              "type": "address[]"
-            },
-            {
-              "internalType": "uint256",
-              "name": "_delegatorMinStake",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "_candidateMinStake",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "_maxStake",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "_stakingFixedEpochDuration",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "_stakingTransitionTimeframeLength",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "_stakingWithdrawDisallowPeriod",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct IStakingHbbft.StakingParams",
-          "name": "",
-          "type": "tuple"
-        },
-        {
-          "internalType": "bytes32[]",
-          "name": "",
-          "type": "bytes32[]"
-        },
-        {
-          "internalType": "bytes16[]",
-          "name": "",
-          "type": "bytes16[]"
-        }
-      ],
-      "name": "initialize",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address",
           "name": "",
           "type": "address"
@@ -425,6 +360,19 @@
     {
       "inputs": [],
       "name": "stakingEpoch",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "stakingEpochStartBlock",
       "outputs": [
         {
           "internalType": "uint256",
