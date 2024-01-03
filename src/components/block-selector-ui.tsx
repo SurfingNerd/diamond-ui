@@ -288,6 +288,10 @@ export class BlockSelectorUI extends React.Component<BlockSelectorUIProps, Block
                           <td>{context.epochStartTimeFormatted}</td>
                         </tr>
                         <tr>
+                          <td>Dao Pot</td>
+                          <td>{parseFloat(context.daoPot).toFixed(4)}</td>
+                        </tr>
+                        <tr>
                           <td>Delta Pot</td>
                           <td>{parseFloat(context.deltaPot).toFixed(4)}</td>
                         </tr>

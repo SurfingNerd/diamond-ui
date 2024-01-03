@@ -333,6 +333,9 @@ export class ModelDataAdapter {
       const deltaPotValue = await this.brContract.methods.deltaPot().call(this.tx(), this.block());
       console.log('got delta pot value: ', deltaPotValue);
       this.context.deltaPot = this.web3.utils.fromWei(deltaPotValue, 'ether');
+      const daoPotValue = await this.web3.eth.getBalance('0xDA0da0da0Da0Da0Da0DA00DA0da0da0DA0DA0dA0');
+      this.context.daoPot = this.web3.utils.fromWei(daoPotValue, 'ether');
+      console.log('got dao pot value', this.context.daoPot)
 
       const reinsertPotValue = await this.brContract.methods.reinsertPot().call(this.tx(), this.block());
       console.log('got reinsert pot value: ', reinsertPotValue);
