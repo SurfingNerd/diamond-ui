@@ -427,8 +427,8 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
         data: data,
         responsiveLayout: "collapse",
         columns: [...columns],
-        pagination: true,
-        paginationSize: 15,
+        // pagination: true,
+        // paginationSize: 15,
         paginationCounter:"rows",
         columnDefaults:{
           title: "",
