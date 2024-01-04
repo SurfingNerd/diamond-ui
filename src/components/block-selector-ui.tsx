@@ -5,6 +5,7 @@ import Accordion from "react-bootstrap/Accordion";
 import "../styles/blockSelector.css";
 import BarLoader from "react-spinners/BarLoader";
 import { ToastContainer, toast } from "react-toastify";
+import { ArrowLeft, ArrowRight, SkipEnd } from "react-bootstrap-icons";
 
 interface BlockSelectorUIProps {
   modelDataAdapter: any;
@@ -88,11 +89,11 @@ export class BlockSelectorUI extends React.Component<BlockSelectorUIProps, Block
   @action.bound
   private async left() {
     const adapter = this.props.modelDataAdapter;
-    console.log("left clicked", adapter.context.currentBlockNumber);
+    console.log("Block selector: Left clicked", adapter.context.currentBlockNumber);
     if (adapter.context.currentBlockNumber >= 1) {
       await adapter.showHistoric(adapter.context.currentBlockNumber - 1);
     } else {
-      console.log(`ignoring left click. ${adapter.context.currentBlockNumber}`);
+      console.log(`Block selector: Ignoring left click. ${adapter.context.currentBlockNumber}`);
     }
   }
 
@@ -118,7 +119,7 @@ export class BlockSelectorUI extends React.Component<BlockSelectorUIProps, Block
     if (
       adapter.context.currentBlockNumber < adapter.context.latestBlockNumber
     ) {
-      await adapter.showHistoric(adapter.context.latestBlockNumber);
+      await adapter.showLatest();
     } else {
       console.log(
         `ignoring latest click. ${adapter.context.currentBlockNumber} ${adapter.context.latestBlockNumber}`
@@ -184,25 +185,25 @@ export class BlockSelectorUI extends React.Component<BlockSelectorUIProps, Block
     //   );
     // }
 
-    // const prompt = () => {
-    //   const input = window.prompt(
-    //     "pleased enter a block number you want to browse historic, or latest to track the latest block."
-    //   );
-    //   if (Number(input) > this.props.modelDataAdapter.context.latestBlockNumber) {
-    //     this.notify(`Entered block cannot be greater than ${this.props.modelDataAdapter.context.latestBlockNumber}`);
-    //     return false;
-    //   }
-    //   if (input) {
-    //     if (input === "latest") {
-    //       this.props.modelDataAdapter.showLatest();
-    //     } else {
-    //       const number = Number.parseInt(input);
-    //       if (Number.isInteger(number)) {
-    //         this.props.modelDataAdapter.showHistoric(number);
-    //       }
-    //     }
-    //   }
-    // };
+    const prompt = () => {
+      const input = window.prompt(
+        "pleased enter a block number you want to browse historic, or latest to track the latest block."
+      );
+      if (Number(input) > this.props.modelDataAdapter.context.latestBlockNumber) {
+        this.notify(`Entered block cannot be greater than ${this.props.modelDataAdapter.context.latestBlockNumber}`);
+        return false;
+      }
+      if (input) {
+        if (input === "latest") {
+          this.props.modelDataAdapter.showLatest();
+        } else {
+          const number = Number.parseInt(input);
+          if (Number.isInteger(number)) {
+            this.props.modelDataAdapter.showHistoric(number);
+          }
+        }
+      }
+    };
 
     return (
       <div className="blockSelectorContainer">
@@ -229,7 +230,7 @@ export class BlockSelectorUI extends React.Component<BlockSelectorUIProps, Block
             this.props.showBlockSelectorInfo ? "slide-down-animating" : "slide-up-animating"
           }`} defaultActiveKey="0">
             <Accordion.Item eventKey="0" style={{border: "0px solid transparent"}}>
-              {/* <div className="blocksInfo">
+              <div className="blocksInfo">
                 <span>Current Block:</span>
                 <div>
                   <Button onClick={this.left.bind(this)}>
@@ -249,7 +250,7 @@ export class BlockSelectorUI extends React.Component<BlockSelectorUIProps, Block
                     <SkipEnd />
                   </Button>
                 </div>
-              </div> */}
+              </div>
             
               {/* <Accordion.Header className="blockAccordionHeader">
                 More Info

@@ -176,7 +176,7 @@ export class ModelDataAdapter {
   }
 
   public async showHistoric(blockNumber: number) {
-
+    console.log("THESESESE", this.isShowHistoric, this.showHistoricBlock, blockNumber)
     if (!this.isShowHistoric || this.showHistoricBlock !== blockNumber) {
       this._isShowHistoric = true;
       this.showHistoricBlock = blockNumber;
@@ -190,7 +190,7 @@ export class ModelDataAdapter {
 
     if (this.isShowHistoric) {
 
-      console.error('show latest.');
+      // console.error('show latest.');
       this._isShowHistoric = false;
       this.web3.eth.defaultBlock = 'latest';
       //async call.
@@ -312,8 +312,7 @@ export class ModelDataAdapter {
     return undefined;
   }
 
-  private block() :  BlockType {
-
+  private block() : BlockType {
     if ( this._isShowHistoric ) {
       return this.showHistoricBlock;
     }
