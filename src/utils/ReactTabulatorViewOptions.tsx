@@ -474,16 +474,19 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
     e.preventDefault();
 
     const updatedCols = this.defaultColumns.map(item => {
-      // console.log(item.title.toLowerCase(), e.target.innerHTML.toLowerCase())
-      let col;
+      let col = this.state.selectedColumns.filter(col => col.title.toLowerCase() == item.title.toLowerCase());
       if (item.title.toLowerCase() === e.target.innerHTML.toLowerCase()) {
-        col = this.state.selectedColumns.filter(col => col.title.toLowerCase() == item.title.toLowerCase());
         if (!col.length) {
-          col[0] = {title: item.title, status: false}
+          col[0] = {title: item.title, status: false};
         }
         col[0].status = !col[0].status;
+        return col[0];
+      } else {
+        if (!col.length) {
+          col[0] = {title: item.title, status: false};
+        }
+        return col[0];
       }
-      return col;
     })
 
     this.setState({
@@ -492,9 +495,6 @@ export class ReactTabulatorViewOptions extends React.Component<ReactTabulatorVie
   }
 
   public render() {
-
-    // const showList = true; // in progress...
-    //return <div />
     return (
        <div>
           <Modal show={this.state.customizeModalShow} onHide={() => this.setState({customizeModalShow: false})} animation={false} centered>
