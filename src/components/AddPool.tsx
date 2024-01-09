@@ -86,7 +86,7 @@ class AddPool extends React.Component<AddPoolProps> {
       console.log(stakeAmount, BigNumber(context.candidateMinStake.toString()).dividedBy(10**18))
       this.notify("Insufficient candidate (pool owner) stake");
     } else {
-        const id = toast.loading("Transaction Pending");
+        const id = toast.loading("Transaction in progress");
         try {
             const resp = await adapter.createPool(this.minningAddress, this.publicKey, stakeAmount, '0x00000000000000000000000000000000');
             if (resp === true) {

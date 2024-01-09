@@ -47,9 +47,10 @@ export class Context {
   public epochStartTime!: number;
 
   public stakingEpochEndTime!: number;
-  
 
   public deltaPot!: string;
+
+  public daoPot!: string;
 
   public reinsertPot!: string;
 

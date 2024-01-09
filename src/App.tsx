@@ -3,7 +3,6 @@ import React, { Fragment } from 'react';
 import { observer } from 'mobx-react';
 import { reaction } from 'mobx';
 import './App.css';
-import BN from "bn.js";
 import 'react-tabulator/lib/styles.css';
 import "react-tabulator/css/bootstrap/tabulator_bootstrap.min.css"; // use Theme(s)
 import './styles/tabulator.css';
@@ -19,7 +18,6 @@ import Web3Modal from "web3modal";
 import { ReactTabulatorViewOptions } from './utils/ReactTabulatorViewOptions';
 import { BlockSelectorUI } from './components/block-selector-ui';
 import { Tab, Tabs } from 'react-bootstrap';
-import { ColumnDefinition } from 'react-tabulator/lib/ReactTabulator';
 import PoolDetail from './components/PoolDetail';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -58,10 +56,6 @@ class App extends React.Component<AppProps, AppState> {
       showBlockSelectorInfo: false
     }
     this.blockchainService = new BlockchainService(props)
-  }
-
-  private ui(o: BN) {
-    return o.toString(10);
   }
 
   notify = (msg: string) => toast(msg);
@@ -104,7 +98,6 @@ class App extends React.Component<AppProps, AppState> {
   changeTab = (e: any) => {
     this.setState({activeTab: e})
   }
-
 
   public async connectWallet() {
     try {
@@ -184,18 +177,19 @@ class App extends React.Component<AppProps, AppState> {
   }
 
   public componentDidMount(): void {
-    console.log('component did mount.');
-
-    this.props.adapter.registerUIElement(this);
+    console.log('App component did mount.');
 
     const { adapter } = this.props;
     const { context } = adapter;
+
+    adapter.registerUIElement(this);
+
     const data = [...context.pools];
-    console.log(data)
     this.setState({poolsData: data});
 
+    // mobx
     reaction(
-      () => context.pools.slice(), // Observe a copy of the pools array
+      () => context.pools.slice(),
       (pools: Pool[]) => {
         this.setState({ poolsData: pools });
       }
@@ -203,64 +197,18 @@ class App extends React.Component<AppProps, AppState> {
   }
 
   public componentWillUnmount() {
-    console.log('component will unmount.');
+    console.log('App component will unmount.');
     this.props.adapter.unregisterUIElement(this);
   }
 
-  // public componentDidUpdate(prevProps:any, prevState: any, snapshot?: any): void {
-  //   console.log("app component updated")
-  //   if (this.props.adapter !== prevProps.adapter) {
-  //     console.log(this.props.adapter, "hehe")
-  //   }
-  // }
-
-  // public rowClicked = (e: any, rowData: any) => {
-  //   if (e.target instanceof HTMLButtonElement && e.target.textContent === "Claim") {
-  //     const rowStakingAddress = rowData._row.data.stakingAddress;
-  //     const poolData = this.state.poolsData.filter(data => data.stakingAddress == rowStakingAddress);
-  //     this.blockchainService.claimReward(e, poolData[0]);
-  //   } else {
-  //     this.viewPoolDetails(e, rowData)
-  //   }
-  // }
-
   public render(): JSX.Element {
-
     const { adapter } = this.props;
     const { context } = adapter;
-    
 
     context.currentValidatorsWithoutPools.map((address: any, key: number) => (
       <div key={key} className="text-danger" title="Validators can loose their pool association when the first validators after chain launch fail to take over control. (missed out key generation ?)">Validator without a Pool Association: {address}</div>
     ));
-
-    const columns : ColumnDefinition[] = [
-      { title: "Pool address", field: "stakingAddress", headerFilter:true, hozAlign: "left",  width:370 },
-      { title: "Stake", field: "totalStake", formatter: "progress", formatterParams: { min: 0, max: 50000000000000000000000 }, width: 100 },
-      { title: "S", headerTooltip: "Staked - has enough stake ?" ,field: "isActive", headerFilter:true, formatter: "tickCross", width: 30},
-      { title: "A", headerTooltip: "Available - is marked as available for upcomming validator set selection", field: "isAvailable", headerFilter:true, formatter: "tickCross",  width: 30 },
-      { title: "C", headerTooltip: "Current - is part of current validator set", field: "isCurrentValidator", headerFilter:true, formatter: "tickCross", width: 30 },
-
-      /* reall required ? */
-      { title: "E", field: "isToBeElected", headerTooltip: "to be Elected - fulfills all requirements to be elected as validator for the upcomming epoch.", headerFilter:true, formatter: "tickCross", width: 30 },
-      /* key generation fields */
-      { title: "P", field: "isPendingValidator", headerTooltip: "Pending - Validator in key generation phase that should write it's acks and parts", headerFilter:true,  formatter: "tickCross", width: 30 },
-      { title: "K1", field: "isWrittenParts", headerTooltip: "Key 1 (Parts) was contributed", headerFilter:true, formatter: "tickCross", width: 30 },
-      { title: "K2", field: "isWrittenAcks", headerTooltip: "Key 2 (Acks) was contributed - Node has written all keys", headerFilter:true, formatter: "tickCross", width: 30 },
-      // { title: "KeyGenMode", field: "keyGenMode", headerFilter: true },
-      /* miner fields */
-      { title: "Miner address", field: "miningAddress", headerFilter:true, hozAlign: "left",  width: 370 },
-    ];
-    
-    // const data = [...context.pools];
-    // console.log("Data:", this.state.poolsData);
-
-    //const target = useRef(null);
-    
-    
-    //const show = context;
-
-    // TODO: css template/framework / convention to have a decent layout without writing CSS
+  
     const result = (
       <div className="App">
         <div className="navbar">
@@ -295,8 +243,6 @@ class App extends React.Component<AppProps, AppState> {
 
         <div>
           <BlockSelectorUI modelDataAdapter={this.props.adapter} showBlockSelectorInfo={this.state.showBlockSelectorInfo} />
-          {/* <ContractDetailsUI adapter={this.props.adapter} /> */}
-          {/* <span className={`${this.isStakingAllowed ? 'text-success' : 'text-danger'}`}> staking {this.stakingAllowedState}: {context.stakingAllowedTimeframe} blocks</span> */}
           {adapter.isReadingData ? (
             <GridLoader
               color={'#254CA0'}
@@ -307,15 +253,13 @@ class App extends React.Component<AppProps, AppState> {
             />
           ) : (
             <Fragment>
-              {/* <h1>Pools Data</h1> */}
               <Tabs
                 className="mb-3"
                 activeKey={this.state.activeTab}
                 onSelect={this.changeTab}
               >
                 <Tab eventKey="pools-overview" title="Pools">
-                  {/* {validatorsWithoutPoolSection} */}
-                  <ReactTabulatorViewOptions adapter={this.props.adapter} dataProp={this.state.poolsData} columnsProp={columns} tabulatorColumsPreset={this.state.tabulatorColumsPreset} setTabulatorColumnPreset={this.setTabulatorColumnPreset} setAppDataState={this.setAppDataState} blockChainService={this.blockchainService}>
+                  <ReactTabulatorViewOptions adapter={this.props.adapter} dataProp={this.state.poolsData} tabulatorColumsPreset={this.state.tabulatorColumsPreset} setTabulatorColumnPreset={this.setTabulatorColumnPreset} setAppDataState={this.setAppDataState} blockChainService={this.blockchainService}>
                   </ReactTabulatorViewOptions>
                 </Tab>
 
@@ -341,43 +285,6 @@ class App extends React.Component<AppProps, AppState> {
             </Fragment>
           )}
         </div>
-
-        {/* <Button onClick={() => {
-            this.forceUpdate();
-            }
-            }>force update</Button> */}
-
-        {/*
-         <div id="addPool" hidden={context.iHaveAPool || context.isSyncingPools}>
-          <form spellCheck={false}>
-            <label>pool address:   <input type="text" value={context.myAddr} readOnly title="determined by current wallet address" /></label> <br />
-            <label>public key: <input type="text" defaultValue={this.examplePublicKey} onChange={(e) => {
-                this.publicKey = e.currentTarget.value;
-                this.calculatedMiningAddress = Context.getAddressFromPublicKeyInfoText(this.publicKey);
-                }} /></label> <br />
-            <label>mining address:</label><label>{this.calculatedMiningAddress}</label><br />
-            <label>stake amount ({context.coinSymbol}):  <input type="number" min={minStakeAmount} defaultValue={this.stakeAmountStr} onChange={(e) => (this.stakeAmountStr = e.currentTarget.value)} /></label> <br />
-            <div className="spinner-border" hidden={!this.processing} role="status">
-              <span className="sr-only">Loading...</span>
-            </div>
-            <button type="button" disabled={this.processing} onClick={this.handleAddPool}>Add Pool</button>
-          </form>
-        </div>
-        <div id="removePool" hidden={!context.iHaveAPool}>
-          <div className="spinner-border" hidden={!this.processing} role="status">
-            <span className="sr-only">Loading...</span>
-          </div>
-          <button type="button" disabled={this.processing}>Remove My Pool (TODO)</button>
-        </div> */}
-
-        {/* <Tabs className="mb-3">
-          <Tab eventKey="overview" title="Overview" >
-            tab1
-          </Tab>
-          <Tab eventKey="state-history" title="History">
-            tab2
-          </Tab>
-        </Tabs> */}
       </div>
     );
 

@@ -86,34 +86,6 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "address[]",
-          "name": "",
-          "type": "address[]"
-        },
-        {
-          "internalType": "bytes[]",
-          "name": "",
-          "type": "bytes[]"
-        },
-        {
-          "internalType": "bytes[][]",
-          "name": "",
-          "type": "bytes[][]"
-        }
-      ],
-      "name": "initialize",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [],
       "name": "notifyKeyGenFailed",
       "outputs": [],
