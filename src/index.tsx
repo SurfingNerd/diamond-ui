@@ -4,7 +4,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { createRoot } from 'react-dom/client';
 import { ModelDataAdapter } from "./model/modelDataAdapter";
 
-const url = new URL(process.env.REACT_APP_URL || "http://localhost:8540");
+const url = new URL(process.env.REACT_APP_URL || "https://rpc.uniq.diamonds");
 
 declare let window: any;
 
