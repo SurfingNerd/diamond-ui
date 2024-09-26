@@ -8,12 +8,11 @@ import { ValidatorSetHbbft } from '../contracts/ValidatorSetHbbft';
 import { StakingHbbftCoins } from '../contracts/StakingHbbftCoins';
 import { BlockRewardHbbftCoins } from '../contracts/BlockRewardHbbftCoins';
 import { KeyGenHistory } from '../contracts/KeyGenHistory';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { makeAutoObservable, observable, runInAction } from 'mobx';
 import { Delegator, Pool } from "./model";
 import { ContractManager } from "./contracts/contractManager";
 import { BlockType, NonPayableTx } from '../contracts/types';
-import { IModelCache, LocalStorageModelCache } from './modelCacheProvider';
-import stakingABI from '../contract-abis/StakingHbbftBase.json';
 
 // needed for querying injected web3 (e.g. from Metamask)
 declare global {
@@ -23,9 +22,9 @@ declare global {
   }
 }
 
-interface modelAdapterState {
-  hasWeb3BrowserSupport: boolean
-}
+// interface modelAdapterState {
+//   hasWeb3BrowserSupport: boolean
+// }
 
 /**Fetches data for the model. */
 export class ModelDataAdapter {
@@ -48,8 +47,10 @@ export class ModelDataAdapter {
 
   public postProvider: any;
 
+  public handlingNewBlock: boolean = false;
+
   public defaultTxOpts = {
-    from: '', gasPrice: '100000000000', gasLimit: '6000000', value: '0',
+    from: '', gasPrice: '1000000000', gasLimit: '8000000', value: '0',
   };
 
   public vsContract!: ValidatorSetHbbft;
@@ -63,6 +64,8 @@ export class ModelDataAdapter {
   private rngContract!: RandomHbbft;
 
   public contracts! : ContractManager;
+
+  public showAllPools: Boolean = false;
 
   // public cache: IModelCache = new LocalStorageModelCache();
 
@@ -104,7 +107,7 @@ export class ModelDataAdapter {
   //   const latestBlock = await this.web3.eth.getBlockNumber();
   //   while(true) {
   //     try {
-  //       console.log("[INFO] Current Block Number", latestBlock);
+  //       console.log("Current Block Number", latestBlock);
   //       if (Number(latestBlock) > Number(this.context.currentBlockNumber)) {
   //         console.log("Block Updated:", this.context.currentBlockNumber, {latestBlock})
   //       }
@@ -118,37 +121,27 @@ export class ModelDataAdapter {
   // TODO: properly implement singleton pattern
   // eslint-disable-next-line max-len
   public static async initialize(url: URL): Promise<ModelDataAdapter> {
+    console.log('Initializing model adapter with:', url.toString());
     
-    console.log('initializing new context. ', url.toString());
+    const adapter = new ModelDataAdapter();
+    adapter.url = url;
+    adapter.web3 = new Web3(url.toString());
+    adapter.contracts = new ContractManager(adapter.web3);
     
-    const result = new ModelDataAdapter();
-    result.url = url;
-    result.web3 = new Web3(url.toString());
-    result.contracts = new ContractManager(result.web3);
+    adapter.vsContract = adapter.contracts.getValidatorSetHbbft();
+    adapter.stContract = await adapter.contracts.getStakingHbbft();
+    adapter.brContract = await adapter.contracts.getRewardHbbft();
+    adapter.kghContract = await adapter.contracts.getKeyGenHistory();
+    adapter.rngContract = await adapter.contracts.getRandomHbbft();
     
-    
-    result.vsContract = result.contracts.getValidatorSetHbbft();
-    result.stContract = await result.contracts.getStakingHbbft();
-    result.brContract = await result.contracts.getRewardHbbft();
-    result.kghContract = await result.contracts.getKeyGenHistory();
-    result.rngContract = await result.contracts.getRandomHbbft();
-    
-    result.defaultTxOpts.from = result.context.myAddr;
+    adapter.defaultTxOpts.from = adapter.context.myAddr;
 
-    console.log('default: ', result.defaultTxOpts);
+    await adapter.initContracts();
+    await adapter.syncPoolsState(true);
+    adapter.isSyncingPools = false;
+    adapter.updateEventSubscription();
 
-    await result.initContracts();
-
-    console.log('default block after init: ', result.web3.eth.defaultBlock);
-    // treat the first think as "new epoch" - so all available data get's queried.
-    await result.syncPoolsState(true);
-    result.isSyncingPools = false;
-
-    await result.updateEventSubscription();
-
-    //await result.retrieveOneShotInfos();
-
-    return result;
+    return adapter;
   }
 
   public async reinitializeContracts(provider: Web3) {
@@ -176,9 +169,14 @@ export class ModelDataAdapter {
     await this.updatePool(pool, activePoolAddrs, toBeElectedPoolAddrs, pendingValidatorAddrs, true);
   }
 
+  public async addNewPool(stakingAddress: string): Promise<Pool> {
+    const pool: Pool = this.createEmptyPool(stakingAddress);
+    await this.reUpdatePool(pool);
+    return pool;
+  }
 
   public async showHistoric(blockNumber: number) {
-
+    console.log("THESESESE", this.isShowHistoric, this.showHistoricBlock, blockNumber)
     if (!this.isShowHistoric || this.showHistoricBlock !== blockNumber) {
       this._isShowHistoric = true;
       this.showHistoricBlock = blockNumber;
@@ -192,7 +190,7 @@ export class ModelDataAdapter {
 
     if (this.isShowHistoric) {
 
-      console.error('show latest.');
+      // console.error('show latest.');
       this._isShowHistoric = false;
       this.web3.eth.defaultBlock = 'latest';
       //async call.
@@ -201,29 +199,65 @@ export class ModelDataAdapter {
   }
 
   public async setProvider(web3Provider: any) {
-    // this.context.myAddr = 'connecting';
+    console.log("SET PROVIDER")
     this.context.myAddr = web3Provider.currentProvider.selectedAddress;
 
     this.hasWeb3BrowserSupport = true;
-    
-    await this.reinitializeContracts(web3Provider);
-
     this.postProvider = web3Provider;
+    
+    // await this.reinitializeContracts(web3Provider);
     
     await this.handleNewBlock();
 
+    // await this.refresh();
+
     return true;
   }
+
+  // public async setProvider(web3Provider: any) {
+  //   console.log("SET PROVIDER")
+  //   this.context.myAddr = web3Provider.currentProvider.selectedAddress;
+
+  //   this.hasWeb3BrowserSupport = true;
+  //   this.postProvider = web3Provider;
+    
+  //   await this.reinitializeContracts(web3Provider);
+
+  //   for (let i = 0; i < this.context.pools.length; i++) {
+  //     const pool = this.context.pools[i];
+  //     try {
+  //       const myStake = new BN(await this.getMyStake(pool.stakingAddress));
+  //       if (parseInt(myStake.toString()) > 0) {
+  //         await new Promise(r => setTimeout(r, 5000));
+  //         runInAction( async() => {
+  //           pool.claimableReward = await this.getClaimableReward(pool.stakingAddress);
+  //           console.log(pool.claimableReward, "pool.claimableReward")
+  //           // pool.orderedWithdrawAmount = this.context.myAddr ? new BN(await this.stContract.methods.orderedWithdrawAmount(pool.stakingAddress, this.context.myAddr).call()) : new BN(0);
+  //         })
+  //       }
+        
+        
+  //     } catch (error) {
+  //       // Handle errors if needed
+  //       console.error('Error updating pool:', error);
+  //     }  
+  //   }
+
+  //   const myBalance = new BN(await this.web3.eth.getBalance(this.context.myAddr));
+  //   runInAction(() => {
+  //     this.context.myBalance = myBalance;
+  //   })
+
+  //   return true;
+  // }
 
   private getBlockHistoryInfoAsString() {
     return this._isShowHistoric ? `historic block #${this.showHistoricBlock}` : 'latest';
   }
 
-  private async refresh() {
+  public async refresh() {
 
     try {
-
-    
       const history_info = this.getBlockHistoryInfoAsString();
       console.log('starting data refresh', history_info);
       this.isReadingData = true;
@@ -238,7 +272,6 @@ export class ModelDataAdapter {
       this.lastError = e;
       this.isReadingData = false;
     }
-
     
     this._uiElementsToUpdate.forEach(x => x.forceUpdate());
   }
@@ -279,8 +312,7 @@ export class ModelDataAdapter {
     return undefined;
   }
 
-  private block() :  BlockType {
-
+  private block() : BlockType {
     if ( this._isShowHistoric ) {
       return this.showHistoricBlock;
     }
@@ -300,6 +332,9 @@ export class ModelDataAdapter {
       const deltaPotValue = await this.brContract.methods.deltaPot().call(this.tx(), this.block());
       console.log('got delta pot value: ', deltaPotValue);
       this.context.deltaPot = this.web3.utils.fromWei(deltaPotValue, 'ether');
+      const daoPotValue = await this.web3.eth.getBalance('0xDA0da0da0Da0Da0Da0DA00DA0da0da0DA0DA0dA0');
+      this.context.daoPot = this.web3.utils.fromWei(daoPotValue, 'ether');
+      console.log('got dao pot value', this.context.daoPot)
 
       const reinsertPotValue = await this.brContract.methods.reinsertPot().call(this.tx(), this.block());
       console.log('got reinsert pot value: ', reinsertPotValue);
@@ -331,32 +366,31 @@ export class ModelDataAdapter {
     const blockNumberAtBegin = this.context.currentBlockNumber;
     const newCurrentValidatorsUnsorted = (await this.vsContract.methods.getValidators().call(this.tx(), this.block()));
     const newCurrentValidators = [...newCurrentValidatorsUnsorted].sort();
-    // apply filter here ?!
 
     const validatorWithoutPool: Array<string> = [...newCurrentValidators];
 
-    if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
+    // if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
     const activePoolAddrs: Array<string> = await this.stContract.methods.getPools().call(this.tx(), this.block());
     // console.log('active Pools:', activePoolAddrs);
-    if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
+    // if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
     const inactivePoolAddrs: Array<string> = await this.stContract.methods.getPoolsInactive().call(this.tx(), this.block());
     // console.log('inactive Pools:', inactivePoolAddrs);
-    if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
+    // if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
     const toBeElectedPoolAddrs = await this.stContract.methods.getPoolsToBeElected().call(this.tx(), this.block());
     // console.log('to be elected Pools:', toBeElectedPoolAddrs);
-    if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
+    // if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
     const pendingValidatorAddrs = await this.vsContract.methods.getPendingValidators().call(this.tx(), this.block());
     // console.log('pendingMiningPools:', pendingValidatorAddrs);
-    if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
-    console.log(`syncing ${activePoolAddrs.length} active and ${inactivePoolAddrs.length} inactive pools...`);
+    // if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
+    console.log(`Syncing ${activePoolAddrs.length} active and ${inactivePoolAddrs.length} inactive pools...`);
     const poolAddrs = activePoolAddrs.concat(inactivePoolAddrs);
-    if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
+    // if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
     // make sure both arrays were sorted beforehand
     if (this.context.currentValidators.toString() !== newCurrentValidators.toString()) {
-      console.log(`validator set changed in block ${this.context.currentBlockNumber} to: ${newCurrentValidators}`);
+      console.log(`Validator set changed in block ${this.context.currentBlockNumber} to: ${newCurrentValidators}`);
       this.context.currentValidators = newCurrentValidators;
     }
-    if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
+    // if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync'); return; }
 
     // check if there is a new pool that is not tracked yet within the context.
     poolAddrs.forEach((poolAddress) => {
@@ -369,18 +403,15 @@ export class ModelDataAdapter {
       }
     });
 
-    const poolsToUpdate = this.context.pools.map(async (p) => {
-      if (blockNumberAtBegin !== this.context.currentBlockNumber) { console.warn('detected slow pool sync in pools'); return; }
+    console.log("this.context.pools", this.context.pools.length)
 
-      await this.updatePool(p, activePoolAddrs, toBeElectedPoolAddrs,
-        pendingValidatorAddrs, isNewEpoch);
+    const poolsToUpdate = this.context.pools.map((p) => {
       const ixValidatorWithoutPool = validatorWithoutPool.indexOf(p.miningAddress);
-      if (ixValidatorWithoutPool !== -1) {
-        validatorWithoutPool.splice(ixValidatorWithoutPool, 1);
-      }
+      if (ixValidatorWithoutPool !== -1) {validatorWithoutPool.splice(ixValidatorWithoutPool, 1)}
+      return this.updatePool(p, activePoolAddrs, toBeElectedPoolAddrs, pendingValidatorAddrs, isNewEpoch);
     });
 
-    await Promise.allSettled(poolsToUpdate)
+    await Promise.allSettled(poolsToUpdate);
 
     runInAction(() => {
       this.context.numbersOfValidators = this.context.pools.filter(x=>x.isCurrentValidator).length;
@@ -397,7 +428,8 @@ export class ModelDataAdapter {
       return '0';
     }
     // getRewardAmount() fails if invoked for a staker without stake in the pool, thus we check that beforehand
-    const hasStake: boolean = stakingAddr === this.context.myAddr ? true : (await this.stContract.methods.stakeFirstEpoch(stakingAddr, this.context.myAddr).call(this.tx(), this.block())) !== '0';
+    const hasStake: boolean = stakingAddr.toLowerCase() === this.context.myAddr ? true : (await this.stContract.methods.stakeFirstEpoch(stakingAddr, this.context.myAddr).call(this.tx(), this.block())) !== '0';
+
     return hasStake ? this.stContract.methods.getRewardAmount([], stakingAddr, this.context.myAddr).call(this.tx(), this.block()) : '0';
   }
 
@@ -421,7 +453,6 @@ export class ModelDataAdapter {
 
   private async getAvailableSince(miningAddress: string): Promise<BN> {
     const rawResult = await this.vsContract.methods.validatorAvailableSince(miningAddress).call(this.tx(), this.block());
-    // console.log('available sinc:', new BN(rawResult).toString('hex'));
     return new BN(rawResult);
   }
 
@@ -437,51 +468,65 @@ export class ModelDataAdapter {
     pool.miningAddress = await this.vsContract.methods.miningByStakingAddress(stakingAddress).call(this.tx(), this.block());
     pool.miningPublicKey = await this.vsContract.methods.getPublicKey(pool.miningAddress).call(this.tx(), this.block());
 
-    const { miningAddress } = pool;
-
+    pool.delegators = (await this.stContract.methods.poolDelegators(stakingAddress).call()).map(delegator => new Delegator(delegator));
     pool.isActive = activePoolAddrs.indexOf(stakingAddress) >= 0;
     pool.isToBeElected = toBeElectedPoolAddrs.indexOf(stakingAddress) >= 0;
 
-    pool.isPendingValidator = pendingValidatorAddrs.indexOf(miningAddress) >= 0;
-    pool.isCurrentValidator = this.context.currentValidators.indexOf(miningAddress) >= 0;
+    pool.isPendingValidator = pendingValidatorAddrs.indexOf(pool.miningAddress) >= 0;
+    pool.isCurrentValidator = this.context.currentValidators.indexOf(pool.miningAddress) >= 0;
+
+    pool.availableSince = await this.getAvailableSince(pool.miningAddress);
+    pool.isAvailable = !pool.availableSince.isZero();
+    pool.isMe = this.context.myAddr === pool.stakingAddress;
+    pool.myStake = new BN(await this.getMyStake(stakingAddress));
+
+    // remove pool
+    if (!this.showAllPools) {
+      if(!pool.isCurrentValidator && !pool.isAvailable && !pool.isToBeElected && !pool.isPendingValidator && !pool.isMe && !pool.myStake.gt(new BN('0'))) {
+        for (let i = 0; i < this.context.pools.length; i++) {
+          if (this.context.pools[i].stakingAddress === pool.stakingAddress) {
+            runInAction(() => {
+              this.context.pools.splice(i, 1);
+            })
+            return;
+          }
+        }
+      } else {
+        if (!pool.isCurrentValidator && !pool.isAvailable && !pool.isToBeElected && !pool.isPendingValidator && !pool.isMe && pool.myStake.gt(new BN('0'))) {
+          pool.score = 0;
+        } else {
+          pool.score = 1000;
+        }
+      }
+    }
 
     runInAction( async() => {
       pool.candidateStake = new BN(await this.stContract.methods.stakeAmount(stakingAddress, stakingAddress).call(this.tx(), this.block()));
       pool.totalStake = new BN(await this.stContract.methods.stakeAmountTotal(stakingAddress).call(this.tx(), this.block()));
       pool.myStake = new BN(await this.getMyStake(stakingAddress));
-      pool.claimableReward = await this.getClaimableReward(stakingAddress);
+      // pool.claimableReward = await this.getClaimableReward(stakingAddress);
       // pool.orderedWithdrawAmount = new BN(await this.stContract.methods.orderedWithdrawAmount(stakingAddress, this.context.myAddr).call(this.tx(), this.block()));
     })
 
-
     pool.candidateStake = new BN(await this.stContract.methods.stakeAmount(stakingAddress, stakingAddress).call(this.tx(), this.block()));
     pool.totalStake = new BN(await this.stContract.methods.stakeAmountTotal(stakingAddress).call(this.tx(), this.block()));
-    pool.myStake = new BN(await this.getMyStake(stakingAddress));
-    pool.claimableReward = await this.getClaimableReward(stakingAddress);
-    pool.orderedWithdrawAmount = new BN(await this.stContract.methods.orderedWithdrawAmount(stakingAddress, this.context.myAddr).call());
+    // pool.claimableReward = await this.getClaimableReward(stakingAddress);
+    pool.orderedWithdrawAmount = this.context.myAddr ? new BN(await this.stContract.methods.orderedWithdrawAmount(stakingAddress, this.context.myAddr).call()) : new BN(0);
 
-    
-    const delegators = await this.stContract.methods.poolDelegators(stakingAddress).call(this.tx(), this.block()); 
-    pool.delegators = delegators.map(delegator => new Delegator(delegator));
+    pool.bannedUntil = new BN(await this.getBannedUntil(pool.miningAddress));
+    pool.banCount = await this.getBanCount(pool.miningAddress);
 
-    pool.bannedUntil = new BN(await this.getBannedUntil(miningAddress));
-    pool.banCount = await this.getBanCount(miningAddress);
-
-    pool.availableSince = await this.getAvailableSince(miningAddress);
-    pool.isAvailable = !pool.availableSince.isZero();
-
-    pool.keyGenMode = await this.contracts.getPendingValidatorState(miningAddress, this.block());
+    pool.keyGenMode = await this.contracts.getPendingValidatorState(pool.miningAddress, this.block());
 
     if (pool.isPendingValidator) {
-      pool.parts = await this.kghContract.methods.parts(miningAddress).call(this.tx(), this.block());
-      const acksLengthBN = new BN(await this.kghContract.methods.getAcksLength(miningAddress).call(this.tx(), this.block()));
+      pool.parts = await this.kghContract.methods.parts(pool.miningAddress).call(this.tx(), this.block());
+      const acksLengthBN = new BN(await this.kghContract.methods.getAcksLength(pool.miningAddress).call(this.tx(), this.block()));
       pool.numberOfAcks = acksLengthBN.toNumber();
     } else {
       pool.parts = '';
       pool.numberOfAcks = 0;
-    }
+    }    
   }
-
 
   private newBlockPolling?: NodeJS.Timeout = undefined;
 
@@ -490,8 +535,7 @@ export class ModelDataAdapter {
    * if we are browsing historic data or not.
    */
   private updateEventSubscription() {
-
-    console.log('updating event subscription. is historic:', this.isShowHistoric);
+    console.log('Updating event subscription. is historic:', this.isShowHistoric);
 
     if (this.isShowHistoric) {
       // if we browse historic, we can safely unsusbscribe from events.
@@ -500,14 +544,13 @@ export class ModelDataAdapter {
     else {
       // if we are tracking the latest block,
       // we only subscript to event if we have not done already.
-
       if (!this.newBlockPolling) {
         this.subscribeToEvents();
       }
     }
   }
 
-  private  unsubscribeToEvents() {
+  private unsubscribeToEvents() {
     if (this.newBlockPolling) {
       clearInterval(this.newBlockPolling);
       this.newBlockPolling = undefined;
@@ -538,20 +581,22 @@ export class ModelDataAdapter {
       }
 
       const currentBlock = await this.web3.eth.getBlockNumber();
-      if (currentBlock > this.context.currentBlockNumber) {
+      if (currentBlock > this.context.currentBlockNumber && !this.handlingNewBlock) {
+        this.handlingNewBlock = true;
         await this.handleNewBlock();
+        this.handlingNewBlock = false;
       }
       // todo: what if the RPCC internet connection is slower than the interval ?
-    }, 1000);
+    }, 300000);
   }
 
 
   // does relevant state updates and checks if the epoch changed
   private async handleNewBlock() : Promise<void> {
-    console.log('[INFO] Handling new block.');
+    console.log('Handling new block.');
     const blockHeader = await this.web3.eth.getBlock('latest');
     
-    console.log(`[INFO] Current Block Number:`, this.context.currentBlockNumber);
+    console.log(`Current Block Number:`, this.context.currentBlockNumber);
 
     runInAction(() => {
       this.context.currentBlockNumber = blockHeader.number;
@@ -566,11 +611,11 @@ export class ModelDataAdapter {
     }
 
     // epoch change
-    console.log(`[INFO] updating stakingEpochEndBlock at block ${this.context.currentBlockNumber}`);
+    console.log(`updating stakingEpochEndBlock at block ${this.context.currentBlockNumber}`);
     const oldEpoch = this.context.stakingEpoch;
     await this.retrieveValuesFromContract();
 
-    console.log("[INFO] Epoch times:", {oldEpoch}, "Latest:", this.context.stakingEpoch, oldEpoch !== this.context.stakingEpoch);
+    console.log("Epoch times:", {oldEpoch}, "Latest:", this.context.stakingEpoch, oldEpoch !== this.context.stakingEpoch);
 
     const isNewEpoch = oldEpoch !== this.context.stakingEpoch;
 
@@ -589,13 +634,10 @@ export class ModelDataAdapter {
     const canStakeOrWithdrawNow = await this.stContract.methods.areStakeAndWithdrawAllowed().call(this.tx(), this.block());
     runInAction(() => {
       this.context.canStakeOrWithdrawNow = canStakeOrWithdrawNow;
-    })
-    
-
-    // TODO: don't do this in every block. There's no event we can rely on, but we can be smarter than this
-    // await this.updateCurrentValidators();
+    });
 
     await this.syncPoolsState(isNewEpoch);
+    this._uiElementsToUpdate.forEach(x => x.forceUpdate());
   }
 
   public async stake(poolAddr: string, amount: string): Promise<boolean> {
@@ -631,20 +673,27 @@ export class ModelDataAdapter {
     return await this.stContract.methods.areStakeAndWithdrawAllowed().call();
   }
 
-  public async createPool(miningAddr: string, publicKey: string, stakeAmount: number, ipAddress: string): Promise<boolean> {
+  public async createPool(miningAddr: string, publicKey: string, stakeAmount: number, ipAddress: string): Promise<boolean | string> {
     const txOpts = { ...this.defaultTxOpts };
     txOpts.from = this.context.myAddr;
     txOpts.value = this.web3.utils.toWei(stakeAmount.toString());
 
     try {
-      console.log(`adding Pool : ${miningAddr} publicKeyHex: ${publicKey} ip ${ipAddress}`);
+      console.log(`adding Pool : ${miningAddr} publicKeyHex: ${publicKey}`);
       // <amount> argument is ignored by the contract (exists for chains with token based staking)
       const receipt = await this.stContract.methods.addPool(miningAddr, publicKey, ipAddress).send(txOpts);
       console.log(`receipt: ${JSON.stringify(receipt, null, 2)}`);
       return true;
-    } catch (e) {
-      console.log(`failed with ${e}`);
-      return false;
+    } catch (e:any) {
+      const errMsg = e.message;
+      console.log("[ERROR] Add pool tx failed with: ", errMsg)
+      if (errMsg.includes('failed with invalid arrayify value') || errMsg.includes('invalid arrayify value')) {
+        return "Invalid Public Key";
+      } else if (errMsg.includes('Transaction has been reverted by the EVM')) {
+        return "Transaction Failed";
+      } else {
+        return false;
+      }
     }
   }
 
@@ -684,15 +733,15 @@ export class ModelDataAdapter {
     // determine available withdraw method and allowed amount
     const maxWithdrawAmount = await this.stContract.methods.maxWithdrawAllowed(address, this.context.myAddr).call();
     const maxWithdrawOrderAmount = await this.stContract.methods.maxWithdrawOrderAllowed(address, this.context.myAddr).call();  
-
     console.assert(maxWithdrawAmount === '0' || maxWithdrawOrderAmount === '0', 'max withdraw amount assumption violated');
 
     let success = false;
     let reason;
 
     try {
+      console.log(maxWithdrawAmount.toString(), maxWithdrawOrderAmount.toString(), amountWeiBN.toString())
       if (maxWithdrawAmount !== '0') {
-        if (new BN(maxWithdrawAmount).lte(amountWeiBN)) {
+        if (new BN(maxWithdrawAmount).gte(amountWeiBN)) {
           reason = 'requested withdraw amount exceeds max';
           return {success, reason};
         } 
@@ -730,15 +779,15 @@ export class ModelDataAdapter {
   }
 
   public async claimReward(poolAddr: string): Promise<boolean | string> {
-    console.log(`[INFO] ${this.context.myAddr} wants to claim the available reward from pool ${poolAddr}`);
+    console.log(`${this.context.myAddr} wants to claim the available reward from pool ${poolAddr}`);
     const txOpts = { ...this.defaultTxOpts };
-    txOpts.gasLimit = '800000000';
+    txOpts.gasLimit = '300000000';
     txOpts.from = this.context.myAddr;
 
     const epochList = await this.brContract.methods.epochsToClaimRewardFrom(poolAddr, this.context.myAddr).call();
     const txEpochList = epochList.slice(0, 5000);
 
-    console.log(`[INFO] ClaimReward: claiming for ${txEpochList.length} of ${epochList.length} epochs...`);
+    console.log(`ClaimReward: claiming for ${txEpochList.length} of ${epochList.length} epochs...`);
 
     try {
       const receipt = await this.stContract.methods.claimReward(txEpochList, poolAddr).send(txOpts);

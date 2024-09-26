@@ -22,6 +22,7 @@ const CustomTable = ({ props }: any) => {
       setRangeEnd(latestBlock);
       setRangeStart(latestBlock);
     })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const updateTable = async (e: any) => {
@@ -36,24 +37,24 @@ const CustomTable = ({ props }: any) => {
 
   return (
     <>
-      <h1>Random Number Generation</h1>
+      <h1>Historic Random Numbers</h1>
 
       <form>
         <input
           name="start"
-          placeholder="Range Start"
+          placeholder="Range Start Block"
           type="number"
           onChange={(e) => setRangeStart(Number(e.target.value))}
           required
-          value={rangeStart}
+          // value={rangeStart}
         />
         <input
           name="end"
-          placeholder="Range End"
+          placeholder="Range End Block"
           type="number"
           onChange={(e) => setRangeEnd(Number(e.target.value))}
           required
-          value={rangeEnd}
+          // value={rangeEnd}
         />
         <button onClick={updateTable} disabled={isLoading}>{ isLoading ? 'Generating!' : 'Generate'}</button>
       </form>
@@ -72,6 +73,7 @@ const CustomTable = ({ props }: any) => {
             <tr>
               <th>Block #</th>
               <th>Random Number</th>
+              <th>Hex Number</th>
             </tr>
           </thead>
           <tbody>
@@ -79,6 +81,7 @@ const CustomTable = ({ props }: any) => {
               <tr key={key}>
                 <td>{item.block}</td>
                 <td>{item.rn}</td>
+                <td>{Number(item.rn).toString(16)}</td>
               </tr>
             ))}
           </tbody>
@@ -89,9 +92,9 @@ const CustomTable = ({ props }: any) => {
 };
 
 class RNG extends React.Component<RNGProps> {
-  constructor(props: RNGProps) {
-    super(props);
-  }
+  // constructor(props: RNGProps) {
+  //   super(props);
+  // }
 
   public render(): JSX.Element {
     const result = (

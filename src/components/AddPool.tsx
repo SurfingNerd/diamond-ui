@@ -1,17 +1,16 @@
-import BN from "bn.js";
 import React from "react";
 import "../styles/addpool.css";
-import { Pool } from "../model/model";
-import { Table } from "react-bootstrap";
 import "react-toastify/dist/ReactToastify.css";
-import { publicToAddress, toBuffer } from "ethereumjs-util";
-import Wallet  from 'ethereumjs-wallet';
-import Accordion from "react-bootstrap/Accordion";
+import { publicToAddress } from "ethereumjs-util";
 import { ToastContainer, toast } from "react-toastify";
 import { ModelDataAdapter } from "../model/modelDataAdapter";
+import BigNumber from 'bignumber.js';
+BigNumber.config({ EXPONENTIAL_AT: 1e+9 })
 
 interface AddPoolProps {
   adapter: ModelDataAdapter;
+  setAppActiveTab: any;
+  setSelectedPool: any;
 }
 
 class AddPool extends React.Component<AddPoolProps> {
@@ -20,9 +19,9 @@ class AddPool extends React.Component<AddPoolProps> {
 
   notify = (msg: string) => toast(msg);
 
-    constructor(props: AddPoolProps) {
-      super(props);
-    }
+  // constructor(props: AddPoolProps) {
+  //   super(props);
+  // }
 
   getAddressFromPublicKey(publicKey: string): string {
     let publicKeyCleaned = publicKey;
@@ -39,13 +38,26 @@ class AddPool extends React.Component<AddPoolProps> {
     return `0x${resultBuffer.toString("hex")}`;
   }
 
+  componentDidUpdate(prevProps: Readonly<AddPoolProps>, prevState: Readonly<{}>, snapshot?: any): void {
+    this.resetInputFields();
+  }
+
+  resetInputFields = () => {
+    const publicKey = document.getElementsByClassName('publicKey');
+    const stakeAmount = document.getElementsByClassName('stakeAmount');
+
+    if (publicKey.length > 0) (publicKey[0] as HTMLInputElement).value = '';
+    
+    if (stakeAmount.length > 0) (stakeAmount[0] as HTMLInputElement).value = '';
+  }
+
   handleAddPool = async (e: any) => {
     e.preventDefault();
 
     const publicKey = this.publicKey;
     this.minningAddress = this.getAddressFromPublicKey(publicKey);
     const stakeAmount = e.target.stakeAmount.value;
-    const ipAddress = e.target.ipAddress.value;
+    // const ipAddress = e.target.ipAddress.value;
 
     const { adapter } = this.props;
     const context = adapter.context;
@@ -53,14 +65,13 @@ class AddPool extends React.Component<AddPoolProps> {
     if (!context.myAddr) {
         this.notify("Please connect wallet!");
         return true;
-    } else if (context.myAddr == 'connecting') {
+    } else if (context.myAddr === 'connecting') {
         this.notify("Please wait for wallet to connect");
         return true;
     }
 
     const accBalance = await adapter.postProvider.eth.getBalance(context.myAddr);
     
-
     if (!adapter.web3.utils.isAddress(this.minningAddress)) {
       this.notify("Enter valid minning address");
     } else if (context.myAddr === this.minningAddress) {
@@ -71,16 +82,22 @@ class AddPool extends React.Component<AddPoolProps> {
       this.notify(`Insufficient balance (${accBalance}) for selected amount ${stakeAmount}`);
     } else if (!adapter.canStakeOrWithdrawNow()) {
       this.notify("Outside staking window");
-    } else if (stakeAmount < context.candidateMinStake) {
+    } else if (stakeAmount < BigNumber(context.candidateMinStake.toString()).dividedBy(10**18)) {
+      console.log(stakeAmount, BigNumber(context.candidateMinStake.toString()).dividedBy(10**18))
       this.notify("Insufficient candidate (pool owner) stake");
     } else {
-        const id = toast.loading("Transaction Pending");
+        const id = toast.loading("Transaction in progress");
         try {
             const resp = await adapter.createPool(this.minningAddress, this.publicKey, stakeAmount, '0x00000000000000000000000000000000');
-            if (resp) {
-            toast.update(id, { render: `Successfully staked ${stakeAmount} DMD`, type: "success", isLoading: false });
+            if (resp === true) {
+              toast.update(id, { render: `Successfully Added pool with stake of ${stakeAmount} DMD`, type: "success", isLoading: false });
+              const newPool = await this.props.adapter.addNewPool(context.myAddr);
+              this.props.setSelectedPool(newPool);
+              this.props.setAppActiveTab('pool-detail');
+            } else if (typeof resp == 'string') {
+              toast.update(id, { render: resp, type: "error", isLoading: false });
             } else {
-            toast.update(id, { render: "User denied transaction", type: "warning", isLoading: false });
+              toast.update(id, { render: "User denied transaction", type: "warning", isLoading: false });
             }
         } catch (err: any) {
             toast.update(id, { render: err.message, type: "error", isLoading: false });
@@ -89,6 +106,8 @@ class AddPool extends React.Component<AddPoolProps> {
             toast.dismiss(id)
         }, 3000);
     }
+    
+    this.resetInputFields();
   };
 
   public render(): JSX.Element {
@@ -117,6 +136,7 @@ class AddPool extends React.Component<AddPoolProps> {
               minLength={128}
               maxLength={130}
               name="publicKey"
+              className="publicKey"
               onChange={(e:any) => this.publicKey = e.currentTarget.value}
               placeholder="Public Key"
               required
@@ -126,18 +146,19 @@ class AddPool extends React.Component<AddPoolProps> {
             <input
               type="number"
               name="stakeAmount"
+              className="stakeAmount"
               placeholder="Initial Stake"
               required
               min={10000}
             />
 
-            <label>Ip Address</label>
+            {/* <label>Ip Address</label>
             <input
               type="text"
               name="ipAddress"
               placeholder="IP Address"
               required
-            />
+            /> */}
 
             <button type="submit">Add</button>
           </form>

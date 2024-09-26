@@ -2,36 +2,7 @@
   "_format": "hh-sol-artifact-1",
   "contractName": "ITxPermission",
   "sourceName": "contracts/interfaces/ITxPermission.sol",
-  "abi": [
-    {
-      "inputs": [
-        {
-          "internalType": "address[]",
-          "name": "",
-          "type": "address[]"
-        },
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "initialize",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }
-  ],
+  "abi": [],
   "bytecode": "0x",
   "deployedBytecode": "0x",
   "linkReferences": {},

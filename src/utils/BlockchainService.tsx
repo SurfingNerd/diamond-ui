@@ -1,8 +1,8 @@
 import BN from "bn.js";
 import { Pool } from "../model/model";
+import { toast } from "react-toastify";
 import { Context } from '../model/context';
 import "react-toastify/dist/ReactToastify.css";
-import { ToastContainer, toast } from "react-toastify";
 import { ModelDataAdapter } from '../model/modelDataAdapter';
 
 interface PoolProps {
@@ -45,22 +45,21 @@ export default class BlockchainService {
   public async claimReward (e:any, pool: any) {
     e.preventDefault();
     if (pool) this.pool = pool;
-    console.log("User wants to claim on pool:", this.pool.stakingAddress);
 
     if (!this.context.myAddr) {
       this.notify("Please connect wallet!");
       return true;
-    } else if (this.context.myAddr == 'connecting') {
+    } else if (this.context.myAddr === 'connecting') {
       this.notify("Please wait for wallet to connect");
       return true;
     }
 
-    const toastId = toast.loading("Transaction Pending");
+    const toastId = toast.loading("Transaction in progress");
     const moreToClaim = await this.adapter.claimReward(this.pool.stakingAddress);
     this.getRewardClaimableAmount();
 
-    if (moreToClaim == 'error') {
-      toast.update(toastId, { render: "Tx Failed, please try again", type: "error", isLoading: false });
+    if (moreToClaim === 'error') {
+      toast.update(toastId, { render: "Tx failed, please try again", type: "error", isLoading: false });
     } else {
       toast.update(toastId, { render: "Claimed Successfully", type: "success", isLoading: false });
     }
@@ -70,15 +69,17 @@ export default class BlockchainService {
     }, 3000);
   }
 
-  public async handleDelegateStake (e: any) {
+  public async handleDelegateStake (e: any, pool: Pool) {
     e.preventDefault();
+
+    if (pool) this.pool = pool;
 
     const stakeAmount = this.adapter.web3.utils.toWei(e.target[0].value).toString();
 
     if (!this.context.myAddr) {
       this.notify("Please connect wallet!");
       return true;
-    } else if (this.context.myAddr == 'connecting') {
+    } else if (this.context.myAddr === 'connecting') {
       this.notify("Please wait for wallet to connect");
       return true;
     }
@@ -92,9 +93,7 @@ export default class BlockchainService {
     const accBalance = await this.adapter.postProvider.eth.getBalance(this.context.myAddr);
 
     if (new BN(stakeAmount).gt(new BN(accBalance))) {
-      console.log(this.context.myBalance.toString(), stakeAmount, accBalance);
-
-      this.notify(`Insufficient balance ${this.context.myBalance} for selected amount ${stakeAmount}`);
+      this.notify(`Insufficient balance ${this.context.myBalance} for selected amount ${(stakeAmount as any) / 10 ** 18}`);
       return true;
     } else if (!this.context.canStakeOrWithdrawNow) {
       this.notify("outside staking/withdraw time window");
@@ -113,13 +112,11 @@ export default class BlockchainService {
       this.notify("Cannot stake on a pool which is currently banned");
       return true;
     } else {
-      const id = toast.loading("Transaction Pending");
+      const id = toast.loading("Transaction in progress");
       try {
         const resp = await this.adapter.stake(this.pool.stakingAddress, stakeAmount);
         if (resp) {
-          await this.adapter.reUpdatePool(this.pool);
-          toast.update(id, { render: `Successfully staked ${stakeAmount} DMD`, type: "success", isLoading: false });
-          // this.forceUpdate();
+          toast.update(id, { render: `Successfully staked ${this.adapter.web3.utils.fromWei(stakeAmount).toString()} DMD`, type: "success", isLoading: false });
         } else {
           toast.update(id, { render: "User denied transaction", type: "warning", isLoading: false });
         }
@@ -133,27 +130,24 @@ export default class BlockchainService {
     }
   };
 
-  public async handleWithdraw (e: any) {
+  public async handleWithdraw (e: any, pool: any) {
     e.preventDefault();
+    if (pool) this.pool = pool;
 
     const withdrawAmount = e.target.withdrawAmount.value;
     const poolAddress = this.pool.stakingAddress;
-    const minningAddress = this.pool.miningAddress;
 
     if (!this.context.myAddr) {
       this.notify("Please connect wallet!");
       return true;
-    } else if (this.context.myAddr == 'connecting') {
+    } else if (this.context.myAddr === 'connecting') {
       this.notify("Please wait for wallet to connect");
       return true;
     }
 
-    const id = toast.loading("Transaction Pending");
-    const isActiveValidator = await this.adapter.vsContract.methods.isValidator(minningAddress).call();
+    const id = toast.loading("Transaction in progress");
 
-    if (isActiveValidator) {
-      toast.update(id, { render: "Active validator, can't withdraw", type: "warning", isLoading: false });
-    } else if (Number.isNaN(withdrawAmount)) {
+    if (Number.isNaN(withdrawAmount)) {
       toast.warning('No amount entered');
     } else if (!this.context.canStakeOrWithdrawNow) {
       toast.warning('Outside staking/withdraw time window');
@@ -170,10 +164,8 @@ export default class BlockchainService {
         } else {
           await this.adapter.reUpdatePool(this.pool);
           toast.update(id, { render: "Transaction compeleted", type: "success", isLoading: false });
-          // this.forceUpdate();
         }
       } catch(err) {
-        console.log(err)
         toast.update(id, { render: "User denied transaction", type: "warning", isLoading: false });
       }
     }
@@ -190,7 +182,7 @@ export default class BlockchainService {
     if (!this.context.myAddr) {
       this.notify("Please connect wallet!");
       return true;
-    } else if (this.context.myAddr == 'connecting') {
+    } else if (this.context.myAddr === 'connecting') {
       this.notify("Please wait for wallet to connect");
       return true;
     }
@@ -198,7 +190,7 @@ export default class BlockchainService {
     if (!this.context.canStakeOrWithdrawNow) {
       this.notify('outside staking/withdraw time window');
     } else {
-      const toastId = toast.loading("Transaction Pending");
+      const toastId = toast.loading("Transaction in progress");
       await this.adapter.claimStake(this.pool.stakingAddress);
       setTimeout(() => {
         toast.dismiss(toastId)
